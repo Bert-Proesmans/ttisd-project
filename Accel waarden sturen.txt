@@ -1,0 +1,6 @@
+
+Testwaarden accelerometer
+X Y Z
+7 0.7 7 (neutraal)
+-4.7 6 5.5 (links)
+-6.4 5 5 (rechts)
