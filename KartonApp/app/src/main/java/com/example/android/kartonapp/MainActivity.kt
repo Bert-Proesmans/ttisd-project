@@ -43,6 +43,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     public override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
 
     }
+
+    /**
+     * TODO
+     * 1) ask for calibration
+     * 2) Save neutral setting/pass to external app
+     * 3) decide freedom of control 
+     */
 }
 
 
