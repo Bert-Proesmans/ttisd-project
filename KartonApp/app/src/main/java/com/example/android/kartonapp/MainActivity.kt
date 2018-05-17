@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     //    var jsimpl: Uri = Uri.parse("https://karton-zenigame.c9users.io/client/index.html")
-    var jsimpl: Uri = Uri.parse("http://192.168.0.82:3000/index.html")
+    var jsimpl: Uri = Uri.parse("http://192.168.1.26:3000")
     var dataAggregator: ExposedData = ExposedData(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {

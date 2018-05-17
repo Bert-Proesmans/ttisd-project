@@ -8,3 +8,13 @@
 \.idea/workspace\.xml
 
 KartonApp/\.idea/caches/build_file_checksums\.ser
+
+site/node_modules/nan/doc/
+
+site/node_modules/nan/
+
+site/node_modules/path-to-regexp/
+
+site/node_modules/\.bin/
+
+site/node_modules/

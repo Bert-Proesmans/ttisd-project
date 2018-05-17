@@ -1,14 +1,22 @@
 <html>
     <head>
-        <script>
+       
+    </head>
+    <body>
+        <H1>Empty body</H1>
+        <script>document.write("JS Enabled");</script>
+		<div id="test">A</div>
+    </body>
+	 <script>
             // alert("Hallo!");
-
+			
             function registerTimeout() {
                 function tick() {
                     // 'Sensor' is an object exposed to us, we call the toString()
                     // method to retrieve the accelerometer data it contains.
                     // Other available methods are 'getX()', 'getY()', 'getZ()'.
                     alert(Sensor.toString());
+					document.getElementById("test").innerHTML = Sensor.toString();
                     // Call registerTimeout() again to loop creating the alert.
                     registerTimeout();
                 }
@@ -17,9 +25,4 @@
                 window.setTimeout(tick, 5000);
             }
         </script>
-    </head>
-    <body>
-        <H1>Empty body</H1>
-        <script>document.write("JS Enabled");</script>
-    </body>
 </html>
