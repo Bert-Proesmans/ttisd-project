@@ -20,6 +20,14 @@ import java.lang.Math.abs
 import android.content.Intent
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
+import com.android.volley.*
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
+import org.json.JSONObject
+
+
 
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
@@ -121,9 +129,40 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val z = event.values[2]
             // Log.d(MAIN_LOG_TAG, "X $x\tY $y\tZ $z")
             //
+
+            if(abs(x - this.dataAggregator.x) < 1 && abs(y - this.dataAggregator.y) < 1 && abs(z - this.dataAggregator.z) < 1){
+                return
+            }
             this.dataAggregator.x = x
             this.dataAggregator.y = y
             this.dataAggregator.z = z
+
+            val queue = Volley.newRequestQueue(this)
+            val url = "http://192.168.1.26:3000"
+
+            val jsonBody = JSONObject()
+            jsonBody.put("func", "wheel")
+            jsonBody.put("x", x)
+            jsonBody.put("y", y)
+            jsonBody.put("z", z)
+
+            val jsobObj = JsonObjectRequest(Request.Method.POST, url, jsonBody,
+                    Response.Listener<JSONObject> { response ->
+                        Log.d("Volley", "/post request OK! Response: $response")
+
+                    },
+                    Response.ErrorListener { error ->
+                        VolleyLog.e("Volley", "/post request fail! Error: ${error.message}")
+                    })
+            queue.add(jsobObj) // Add the request to the RequestQueue.
+
+
+
+
+
+
+
+
         }
     }
 
