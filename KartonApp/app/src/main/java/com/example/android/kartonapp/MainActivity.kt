@@ -18,6 +18,8 @@ import android.support.annotation.Nullable
 import android.webkit.*
 import java.lang.Math.abs
 import android.content.Intent
+import android.view.Menu
+import android.view.MenuItem
 
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
@@ -28,15 +30,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     inner class ExposedData constructor(mContext: Context) {
         var context = mContext
-        var x = 0.0f
+        var x: Float = 0.0f
             @JavascriptInterface
             get
 
-        var y = 0.0f
+        var y: Float = 0.0f
             @JavascriptInterface
             get
 
-        var z = 0.0f
+        var z: Float = 0.0f
             @JavascriptInterface
             get
 
@@ -46,11 +48,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    var jsimpl: Uri = Uri.parse("https://karton-zenigame.c9users.io/client/index.html")
+    //    var jsimpl: Uri = Uri.parse("https://karton-zenigame.c9users.io/client/index.html")
+    var jsimpl: Uri = Uri.parse("http://192.168.0.82:3000/index.html")
+    var dataAggregator: ExposedData = ExposedData(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setSupportActionBar(findViewById(R.id.toolbar_main))
 
         val senSensorManager: SensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val senAccelerometer: Sensor = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -59,11 +64,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_UI)
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        //
+        return super.onCreateOptionsMenu(menu)
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebview() {
         val webview = findViewById<WebView>(R.id.webview) as WebView
         //
         webview.settings.javaScriptEnabled = true
+        webview.webChromeClient = WebChromeClient()
         webview.webViewClient = object : WebViewClient() {
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
@@ -72,11 +84,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
             override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
                 Log.e(WEBCLIENT_LOG_TAG, "HTTP Error: ${errorResponse?.reasonPhrase}")
-            }
-
-            override fun onPageFinished(view: WebView, url: String) {
-                // do your javascript injection here, remember "javascript:" is needed to recognize this code is javascript
-                webview.loadUrl("javascript:alert('hello')")
             }
 
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
@@ -101,6 +108,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
         //
+        webview.addJavascriptInterface(this.dataAggregator, "Sensor")
         webview.loadUrl(jsimpl.toString())
     }
 
@@ -112,6 +120,30 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val y = event.values[1]
             val z = event.values[2]
             Log.d(MAIN_LOG_TAG, "X $x\tY $y\tZ $z")
+            //
+            this.dataAggregator.x = x
+            this.dataAggregator.y = y
+            this.dataAggregator.z = z
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        R.id.action_settings -> {
+            // Use chose the "Settings" icon
+            true
+        }
+
+        R.id.action_refresh -> {
+            // Use chose the "Refresh" icon
+            val webview = findViewById<WebView>(R.id.webview) as WebView
+            webview.reload()
+            true
+        }
+
+        else -> {
+            // If we got here, an unhandled icon has been clicked.
+            // Delegate to the superclass for handling.
+            super.onOptionsItemSelected(item)
         }
     }
 
