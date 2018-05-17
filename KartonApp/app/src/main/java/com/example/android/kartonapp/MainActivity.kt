@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         @JavascriptInterface
         override fun toString(): String {
-            return "$x $y $z"
+            return "X $x\tY $y\tZ $z"
         }
     }
 
@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val x = event.values[0]
             val y = event.values[1]
             val z = event.values[2]
-            Log.d(MAIN_LOG_TAG, "X $x\tY $y\tZ $z")
+            // Log.d(MAIN_LOG_TAG, "X $x\tY $y\tZ $z")
             //
             this.dataAggregator.x = x
             this.dataAggregator.y = y
@@ -137,6 +137,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // Use chose the "Refresh" icon
             val webview = findViewById<WebView>(R.id.webview) as WebView
             webview.reload()
+            Log.d(WEBCLIENT_LOG_TAG, "Refreshed page")
             true
         }
 
