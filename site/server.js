@@ -1,3 +1,6 @@
+// https://socket.io/get-started/chat/
+// https://socket.io/blog/native-socket-io-and-android/ 
+
 var http = require('http');
 var fs = require('fs');
 var express = require('express');
