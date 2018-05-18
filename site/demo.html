@@ -1,7 +1,7 @@
 <html>
     <head>
         <script>
-            // alert("Hallo!");
+            alert("Hallo!");
 
             function registerTimeout() {
                 function tick() {
@@ -16,6 +16,8 @@
                 // The timeout is set to 5 seconds
                 window.setTimeout(tick, 5000);
             }
+            // Bootstrap initial timeout.
+            registerTimeout();
         </script>
     </head>
     <body>
