@@ -1,6 +1,7 @@
 package com.example.android.kartonapp
 
 import android.annotation.SuppressLint
+import android.app.SearchManager
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -18,8 +19,10 @@ import android.support.annotation.Nullable
 import android.webkit.*
 import java.lang.Math.abs
 import android.content.Intent
+import android.support.v7.widget.SearchView
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
@@ -48,35 +51,61 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    //    var jsimpl: Uri = Uri.parse("https://karton-zenigame.c9users.io/client/index.html")
-    var jsimpl: Uri = Uri.parse("http://192.168.0.82:3000/index.html")
-    var dataAggregator: ExposedData = ExposedData(this)
+    private var jsimpl: Uri? = null
+    private var dataAggregator: ExposedData = ExposedData(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar_main))
 
-        val senSensorManager: SensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        val senAccelerometer: Sensor = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        // "http://10.5.23.251:3000/index.html"
+        handleNewTarget("http://192.168.43.167:3000/index.html")
+    }
 
-        initWebview()
-        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_UI)
+    // TODO, Make this work with search window
+    private fun handleNewTarget(url: String?): Boolean {
+        Log.d(MAIN_LOG_TAG, "Received $url")
+
+        val target = Uri.parse(url)
+        if (target.isAbsolute && (target.scheme == "http" || target.scheme == "https")) {
+            Log.d(MAIN_LOG_TAG, "Setting url target")
+            this.jsimpl = target
+        }
+
+
+        if (this.jsimpl != null) {
+            val senSensorManager: SensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            val senAccelerometer: Sensor = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+            initWebview(this.jsimpl)
+            senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_UI)
+            return true
+        } else {
+            Toast.makeText(this, "No valid URL provided", Toast.LENGTH_SHORT).show()
+            return false
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
+        // Configure search widget
+//        val searchItem = menu?.findItem(R.id.action_search)
+//        var searchView = searchItem?.actionView as SearchView
         //
         return super.onCreateOptionsMenu(menu)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun initWebview() {
+    private fun initWebview(targetUri: Uri?) {
+        if (targetUri == null) return;
+
+        Log.w(MAIN_LOG_TAG, "Initialising webview")
         val webview = findViewById<WebView>(R.id.webview) as WebView
         //
         webview.settings.javaScriptEnabled = true
         webview.webChromeClient = WebChromeClient()
-        webview.webViewClient = object : WebViewClient() {
+        val customWebClient = object : WebViewClient() {
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                 Log.e(WEBCLIENT_LOG_TAG, "HTTP Receive error: ${error?.description}")
@@ -92,13 +121,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                Log.i(WEBCLIENT_LOG_TAG, "Deciding override for url: ${request?.url}")
                 //
-                if (request?.url?.host == jsimpl.host) {
+                if (request?.url?.host == targetUri.host) {
                     return false
                 }
                 // Otherwise, the link is not for a page on my site, so launch another Activity that handles URLs
                 if (request != null) {
+                    Log.w(WEBCLIENT_LOG_TAG, "Overriding for url: ${request.url}")
                     val intent = Intent(Intent.ACTION_VIEW, request.url)
                     startActivity(intent)
                     return true
@@ -107,9 +136,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 return false
             }
         }
+        webview.webViewClient = customWebClient
         //
         webview.addJavascriptInterface(this.dataAggregator, "Sensor")
-        webview.loadUrl(jsimpl.toString())
+        webview.loadUrl(targetUri.toString())
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -140,6 +170,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             Log.d(WEBCLIENT_LOG_TAG, "Refreshed page")
             true
         }
+
+//        R.id.action_search -> {
+//            Log.d(MAIN_LOG_TAG, "OnItemSelected")
+//            val searchView = item.actionView as SearchView
+//            if (handleNewTarget(searchView.query.toString())) {
+//                Toast.makeText(this, "Processing URL", Toast.LENGTH_SHORT).show()
+//            } else {
+//                Toast.makeText(this, "Invalid URL", Toast.LENGTH_SHORT).show()
+//            }
+//            true
+//        }
 
         else -> {
             // If we got here, an unhandled icon has been clicked.

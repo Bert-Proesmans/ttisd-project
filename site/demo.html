@@ -1,27 +1,61 @@
 <html>
-    <head>
-        <script>
-            alert("Hallo!");
 
-            function registerTimeout() {
-                function tick() {
-                    // 'Sensor' is an object exposed to us, we call the toString()
-                    // method to retrieve the accelerometer data it contains.
-                    // Other available methods are 'getX()', 'getY()', 'getZ()'.
-                    alert(Sensor.toString());
-                    // Call registerTimeout() again to loop creating the alert.
-                    registerTimeout();
+<head>
+    <script src="jquery.js"></script>
+    <script>
+        $(function () {
+            "use strict";
+
+            // if user is running mozilla then use it's built-in WebSocket
+            window.WebSocket = window.WebSocket || window.MozWebSocket;
+
+            var wsUrl = 'ws://' + location.hostname + (location.port ? ':' + location.port : '');
+            var connection = new WebSocket(wsUrl);
+
+            connection.onopen = function () {
+                // connection is opened and ready to use
+            };
+
+            connection.onerror = function (error) {
+                // an error occurred when sending/receiving data
+            };
+
+            connection.onmessage = function (message) {
+                // received some message from the server
+            };
+
+            /**
+             * This method is optional. If the server wasn't able to
+             * respond to the in 3 seconds then show some error message 
+             * to notify the user that something is wrong.
+             */
+            var intervalId = null;
+            intervalId = setInterval(function () {
+                if (connection.readyState !== 1) {
+                    alert('Health check of websocket failed, shutting down');
+                    clearInterval(intervalId);
                 }
+            }, 3000);
 
-                // The timeout is set to 5 seconds
-                window.setTimeout(tick, 5000);
-            }
-            // Bootstrap initial timeout.
-            registerTimeout();
-        </script>
-    </head>
-    <body>
-        <H1>Empty body</H1>
-        <script>document.write("JS Enabled");</script>
-    </body>
+            /*
+             * Send new values every 50 ms.
+             */
+            setInterval(function () {
+                var buffer = new Float32Array(3);
+                buffer[0] = Sensor.getX();
+                buffer[1] = Sensor.getY();
+                buffer[2] = Sensor.getZ();
+                // 
+                connection.send(buffer);
+                // console.log(Array.apply([], new Uint8Array(buffer.buffer)).join(","));
+            }, 50);
+        });
+    </script>
+</head>
+
+<body>
+    <H1>Empty body</H1>
+    <script>document.write("JS Enabled");</script>
+</body>
+
 </html>
