@@ -55,14 +55,14 @@ var state = {
         {
             this.player.body.velocity.x = -200;
         }
-        else if (cursors.right.isDown)
+         if (cursors.right.isDown)
         {
             this.player.body.velocity.x = 200;
         }
-        else if(cursors.down.isDown){
+         if(cursors.down.isDown){
             this.player.body.velocity.y = 200;
         }
-        else if(cursors.up.isDown){
+         if(cursors.up.isDown){
             this.player.body.velocity.y = -200;
         }
     },
