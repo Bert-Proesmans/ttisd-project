@@ -54,27 +54,25 @@ var state = {
 
         this.obstacles = game.add.group();
         this.obstacles.enableBody = true;
-        this.obstacles.physicsBodyType = Phaser.Physics.ARCADE;
+        
 
         var spr0 = this.obstacles.create(this.world.randomX, 0, 'obs1');
         spr0.name = "obs" + 1;
         this.physics.arcade.enableBody(spr0);
         spr0.body.velocity.y = 150;
-        this.obstacles = game.add.group();
-        this.obstacles.enableBody = true;
-        this.obstacles.physicsBodyType = Phaser.Physics.ARCADE;
-       
+        this.physics.arcade.overlap(this.player, this.obstacles, this.collisionHandler, null, this);
 
     },
     collisionHandler : function(player, obs) {
         obs.kill();
+        alert("ICI");
     },
     update: function(){
         
         let cursors = this.cursors
         //  Reset the player, then check for movement keys
         this.player.body.velocity.setTo(0, 0);
-        this.physics.arcade.overlap(this.player, this.obstacles, this.collisionHandler, null, this);
+        
 
         if (cursors.left.isDown)
         {
@@ -104,11 +102,11 @@ var state = {
 
         var i = 0;
         
-            var spr0 = obst.create(w.randomX, 0, 'obs1');
+            /*var spr0 = obst.create(w.randomX, 0, 'obs1');
             spr0.name = "obs" + w.randomX;
             physics.arcade.enableBody(spr0);
             spr0.body.velocity.y = 150;
-            spr0.outOfBoundsKill = true;
+            spr0.outOfBoundsKill = true;*/
           
 
 
