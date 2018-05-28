@@ -46,7 +46,8 @@ var state = {
         this.player.body.collideWorldBounds = true;
         this.player.reset(this.world.width / 4, this.world.centerY);
         this.camera.follow(this.player);
-       
+    
+        this.time.events.repeat(Phaser.Timer.SECOND, 9999, this.generateObs, this);
  
         /*this.spr0 = this.add.sprite(this.world.randomX, 0, 'obs1');
         this.physics.arcade.enableBody(this.spr0);
@@ -64,8 +65,7 @@ var state = {
 
     },
     collisionHandler : function(player, obs) {
-        obs.kill();
-        alert("ICI");
+
     },
     update: function(){
         
@@ -95,7 +95,7 @@ var state = {
     
     },
     generateObs: function(){
-      
+    
        
         var obst = this.obstacles;
         var w = this.world
@@ -103,11 +103,10 @@ var state = {
 
         var i = 0;
         
-            /*var spr0 = obst.create(w.randomX, 0, 'obs1');
-            spr0.name = "obs" + w.randomX;
-            physics.arcade.enableBody(spr0);
-            spr0.body.velocity.y = 150;
-            spr0.outOfBoundsKill = true;*/
+        var spr0 = this.obstacles.create(this.world.randomX, 0, 'obs1');
+        spr0.name = "obs" + this.world.randomX;
+        this.physics.arcade.enableBody(spr0);
+        spr0.body.velocity.y = 150;
           
 
 
@@ -116,8 +115,8 @@ var state = {
 };
 
 var game = new Phaser.Game(
-    500,
-    568,
+    800,
+    800,
     Phaser.AUTO,
     'game',
     state
