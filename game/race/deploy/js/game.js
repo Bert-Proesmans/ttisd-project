@@ -36,6 +36,8 @@ var state = {
         this.load.image("blue_car", "/assets/car_blue_1.png");
         this.load.image("bg", "/assets/land_dirt12.png");
         this.load.image("obs1", "/assets/oil.png");
+        this.load.image("window", "/assets/grey_panel.png");
+        this.totalScore = 0;
     },
     create: function(){
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -46,6 +48,8 @@ var state = {
         this.player.body.collideWorldBounds = true;
         this.player.reset(this.world.width / 4, this.world.centerY);
         this.camera.follow(this.player);
+        
+        this.scoreText = game.add.text(0, 0, "Score: 0", {align: "center"});
     
         this.time.events.repeat(Phaser.Timer.SECOND, 9999, this.generateObs, this);
  
@@ -61,12 +65,41 @@ var state = {
         spr0.name = "obs" + 1;
         this.physics.arcade.enableBody(spr0);
         spr0.body.velocity.y = 150;
+
+        game.input.onDown.add(this.stg, self);
     
 
     },
     collisionHandler : function(player, obs) {
+ 
 
-    },
+        this.sprEnd = game.add.sprite(250, 300, 'window');
+        this.txtEnd = game.add.text(310, 310, "Game over", {align: "center"});
+        this.scoreEnd = game.add.text(310, 350, "Score:" + this.totalScore, {align: "center"})
+        this.restartGameEnd = game.add.text(310, 390, "Restart", {align: "center"})
+        this.sprEnd.scale.setTo(3, 2)
+
+        
+        this.game.paused = true;
+
+     
+
+
+        
+     
+        },
+        stg : function(){
+            if(this.game.paused === true){
+                location.reload();
+                
+                //this.txtEnd.destroy();
+                //this.sprEnd.destroy();
+                //this.restartGameEnd.destroy();
+                //this.scoreEnd.destroy()
+            }
+
+        },
+        
     update: function(){
         
         let cursors = this.cursors
@@ -107,6 +140,9 @@ var state = {
         spr0.name = "obs" + this.world.randomX;
         this.physics.arcade.enableBody(spr0);
         spr0.body.velocity.y = 150;
+
+        this.totalScore += 5;
+        this.scoreText.setText("Score: " + this.totalScore);
           
 
 
