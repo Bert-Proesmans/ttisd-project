@@ -35,7 +35,7 @@ var state = {
         spr0.name = "obs" + 1;
         this.physics.arcade.enableBody(spr0);
         spr0.body.velocity.y = 150;
-        this.physics.arcade.overlap(this.player, this.obstacles, this.collisionHandler, null, this);
+    
 
     },
     collisionHandler : function(player, obs) {
@@ -63,6 +63,7 @@ var state = {
          if(cursors.up.isDown){
             this.player.body.velocity.y = -200;
         }
+        this.physics.arcade.overlap(this.player, this.obstacles, this.collisionHandler, null, this);
     },
     gas: function() {
         this.player.body.velocity.y = -GAS;
