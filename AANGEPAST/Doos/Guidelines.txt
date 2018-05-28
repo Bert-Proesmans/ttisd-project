@@ -1,0 +1,9 @@
+Rugplaat:
+	bevat volledige rugplaat + onderste apparte stuk dient om bovenop de 3 'stutten te plakken' 
+Gsm-houder:
+	bevat de gsm-houder + 3 stutten die op de graveerde lijnen moeten komen, dit is de beweegbare ruimte voor de gsm
+
+extra: om aan de gsm houder te kunnen, rooster maken van het apparte stuk?
+		of mogelijk erboven uit kunnen halen, maar dan enkel de gsm en niet de houder!!
+
+
