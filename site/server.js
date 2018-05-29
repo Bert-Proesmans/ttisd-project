@@ -15,18 +15,35 @@ var client = null;
 // All calibration happens in LANDSCAPE MODE!
 // The alpha, beta, gamma values are always relative to the device orthogonal
 // system.
+// https://developer.mozilla.org/en-US/docs/Web/Guide/Events/Orientation_and_motion_data_explained 
 var calibration = {
 	valid: false,
-	// Rotation around Z-axis
-	alpha: [null, null],
-	// Rotation around X-axis.
-	beta: [null, null],
-	// Rotation around Y-axis.
-	gamma: [null, null],
-}
+	zero: {
+		// Rotation around Z-axis, Z-axis is perpendicular to the ground plane
+		// and is a vector moving outwards of the screen. Positive towards the user,
+		// negative towards the back of the device.
+		alpha: null,
+		// Rotation around X-axis. Part of ground plane, positive upwards, negative
+		// downwards. LANDSCAPE MODE.
+		beta: null,
+		// Rotation around Y-axis. Part of ground plane, positive towards left, negative
+		// towards right. LANDSCAPE MODE.
+		gamma: null,
+	},
+	max_min: {
+		alpha: [0, 360],
+		beta: [-180, 180],
+		gamma: [-90, 90],
+	}
+};
+
 var views = [];
 // Contains callbacks which have to be resolved
 var promise_snapshot_defer = null;
+
+function toRadians(angle) {
+	return angle * (Math.PI / 180);
+}
 
 function Deferred() {
 	let resolve, reject, p = new Promise((res, rej) => [resolve, reject] = [res, rej]);
@@ -90,6 +107,9 @@ const questions_racing = [
 			// Make sure to throw away the data and just return true.
 			return promise_snapshot_defer.then(function (data) {
 				calibration.valid = false;
+				calibration.zero.alpha = data.do.alpha;
+				calibration.zero.beta = data.do.beta;
+				calibration.zero.gamma = data.do.gamma;
 				return true;
 			});
 		}
@@ -97,7 +117,7 @@ const questions_racing = [
 	{
 		type: 'input',
 		name: 'fullRotateLeft',
-		message: 'Rotate the steer to the left as far as possible',
+		message: 'Rotate the steering wheel to the left as far as possible',
 		default: 'OK',
 		when: function (hash) {
 			return hash.game === 'Racing';
@@ -115,7 +135,7 @@ const questions_racing = [
 			// Make sure to throw away the data and just return true.
 			return promise_snapshot_defer.then(function (data) {
 				// Far left range
-				calibration.alpha[0] = data.do.alpha;
+				calibration.max_min.alpha[0] = data.do.alpha;
 				return true;
 			});
 		},
@@ -123,7 +143,7 @@ const questions_racing = [
 	{
 		type: 'input',
 		name: 'fullRotateRight',
-		message: 'Rotate the steer to the right as far as possible',
+		message: 'Rotate the steering wheel to the right as far as possible',
 		default: 'OK',
 		when: function (hash) {
 			return hash.game === 'Racing';
@@ -141,9 +161,82 @@ const questions_racing = [
 			// Make sure to throw away the data and just return true.
 			return promise_snapshot_defer.then(function (data) {
 				// Far right range
-				calibration.alpha[1] = data.do.alpha;
+				calibration.max_min.alpha[1] = data.do.alpha;
 				return true;
 			});
+		},
+	},
+	{
+		type: 'input',
+		name: 'fullPull',
+		message: 'Pull the steering wheel towards you as far as possible',
+		default: 'OK',
+		when: function (hash) {
+			return hash.game === 'Racing';
+		},
+		validate: function (value) {
+			// var done = this.async();
+			var valid = promise_snapshot_defer == null;
+			if (!valid) {
+				return "Broke state machine";
+			}
+			//
+			promise_snapshot_defer = Deferred();
+			// Request for a snapshot of the client.
+			client_send_str("STEP");
+			// Make sure to throw away the data and just return true.
+			return promise_snapshot_defer.then(function (data) {
+				// Far right range
+				calibration.max_min.gamma[0] = data.do.gamma;
+				return true;
+			});
+		},
+	},
+	{
+		type: 'input',
+		name: 'fullPush',
+		message: 'Push the steering wheel away from you as far as possible',
+		default: 'OK',
+		when: function (hash) {
+			return hash.game === 'Racing';
+		},
+		validate: function (value) {
+			// var done = this.async();
+			var valid = promise_snapshot_defer == null;
+			if (!valid) {
+				return "Broke state machine";
+			}
+			//
+			promise_snapshot_defer = Deferred();
+			// Request for a snapshot of the client.
+			client_send_str("STEP");
+			// Make sure to throw away the data and just return true.
+			return promise_snapshot_defer.then(function (data) {
+				// Far right range
+				calibration.max_min.gamma[1] = data.do.gamma;
+				return true;
+			});
+		},
+	},
+	{
+		type: 'input',
+		name: 'allDone',
+		message: 'Calibration complete',
+		default: 'OK',
+		when: function (hash) {
+			return hash.game === 'Racing';
+		},
+		validate: function (value) {
+			// var done = this.async();
+			var valid = promise_snapshot_defer == null && client != null;
+			if (!valid) {
+				return "Broke state machine";
+			}
+			//
+			calibration.valid = true;
+			// Post processing
+
+			return true;
 		},
 	},
 
@@ -182,13 +275,13 @@ function delegate_data(data_bytes, connection) {
 		return;
 	}
 
-	console.log({ dbg: true, var: "obj.data", type: typeof obj.data });
+	// console.log({ dbg: true, var: "obj.data", type: typeof obj.data });
 	if (!obj.data) {
 		console.log({ action: "delegate_bytes", status: "FAIL", message: "No/invalid data present in payload" });
 		return;
 	}
 
-	console.log({ dbg: true, var: "obj", value: obj });
+	// console.log({ dbg: true, var: "obj", value: obj });
 
 	switch (obj.type) {
 		case "SNAPSHOT":
@@ -201,6 +294,49 @@ function delegate_data(data_bytes, connection) {
 			}
 			break;
 		case "RUNNING":
+			if (connection !== client) break;
+
+			// Calculate the ratio's for each movement.
+			var zAngle = obj.data.do.alpha - calibration.zero.alpha;
+			var yAngle = obj.data.do.gamma - calibration.zero.gamma;
+
+			var multicastObj = {
+				type: "RUNNING",
+				data: {
+					ratioLeft: 0,
+					ratioRight: 0,
+					ratioForward: 0,
+					ratioBackward: 0,
+				}
+			};
+
+			zAngle = Math.sin(toRadians(zAngle));
+			yAngle = Math.sin(toRadians(yAngle));
+
+			if (zAngle < 0) { // Turn right
+				multicastObj.data.ratioRight = Math.abs(zAngle);
+				multicastObj.data.ratioLeft = 0;
+			} else { // Turn left
+				multicastObj.data.ratioRight = 0;
+				multicastObj.data.ratioLeft = Math.abs(zAngle);
+			}
+
+			if (yAngle < 0) { // Pull
+				multicastObj.data.ratioBackward = Math.abs(zAngle);
+				multicastObj.data.ratioForward = 0;
+			} else {
+				multicastObj.data.ratioBackward = 0;
+				multicastObj.data.ratioForward = Math.abs(zAngle);
+			}
+
+			console.log({ ratios: multicastObj });
+			multicastObj = JSON.stringify(multicastObj);
+
+			// Send it to all views
+			var index;
+			for (index = 0; index < views.length; ++index) {
+				views[index].sendUTF(multicastObj);
+			}
 			break;
 		default:
 			console.log((new Date()) + " Unrecognized payload!");
@@ -228,7 +364,7 @@ var options = {
 	key: fs.readFileSync('key.pem'),
 	cert: fs.readFileSync('cert.pem'),
 	passphrase: 'test',
-  };
+};
 
 var httpServer = https.createServer(options, function (req, res) {
 	var localPath = null;
@@ -238,7 +374,7 @@ var httpServer = https.createServer(options, function (req, res) {
 		localPath = req.url;
 	} else if (req.url == "/client.html") {
 		localPath = "client.html";
-	} else if (req.url == "/view.html") {
+	} else if (req.url == "/view.html" || req.url == "/") {
 		localPath = "view.html";
 	}
 
@@ -280,11 +416,11 @@ wsServer.on('request', function (request) {
 	// Received new data from client
 	connection_outer.on('message', function (message) {
 		if (message.type == 'utf8') {
-			console.log((new Date()) + " Received string from " + connection_outer.remoteAddress + ": " + message.utf8Data);
+			// console.log((new Date()) + " Received string from " + connection_outer.remoteAddress + ": " + message.utf8Data);
 			//
 			delegate_command(message.utf8Data, connection_outer);
 		} else if (message.type == 'binary') {
-			console.log((new Date()) + " Received binary from " + connection_outer.remoteAddress);
+			// console.log((new Date()) + " Received binary from " + connection_outer.remoteAddress);
 			// console.log(Array.apply([], new Uint8Array(message.binaryData)).join(","));
 			//
 			delegate_data(message.binaryData, connection_outer);
@@ -312,8 +448,12 @@ wsServer.on('request', function (request) {
 process.stdin.once('data', function () {
 	// Execute inquirer for interactive calibration
 	inquirer.prompt(questions_racing).then(function (answers) {
-		console.log({ action: "Interactive calibration", status: "OK", data: answers });
-		// Instruct client to send updates
-		client_send_str("FLOOD");
+		if (calibration.valid) {
+			console.log({ action: "Interactive calibration", status: "OK", data: answers });
+			console.log({ message: "Calibration complete", calib: calibration });
+			console.log(calibration.max_min);
+			// Instruct client to send updates
+			client_send_str("FLOOD");
+		}
 	});
 });

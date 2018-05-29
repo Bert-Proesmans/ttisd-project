@@ -26,12 +26,19 @@
             console.log(data);
         }
 
-        function init_gn() {
+        function init_gn(callback) {
             var args = {
-                logger: logger
+                frequency: 50,					// ( How often the object sends the values - milliseconds )
+                gravityNormalized: true,			// ( If the gravity related values to be normalized )
+                orientationBase: GyroNorm.GAME,		// ( Can be GyroNorm.GAME or GyroNorm.WORLD. gn.GAME returns orientation values with respect to the head direction of the device. gn.WORLD returns the orientation values with respect to the actual north direction of the world. )
+                decimalCount: 2,					// ( How many digits after the decimal point will there be in the return values )
+                logger: logger,					// ( Function to be called to log messages from gyronorm.js )
+                screenAdjusted: true			// ( If set to true it will return screen adjusted values. )
             };
 
             gn = new GyroNorm();
+            logger({ message: "Init GyroNorm" });
+
             gn.init(args).then(function () {
                 var isAvailable = gn.isAvailable();
                 if (!isAvailable.deviceOrientationAvailable) {
@@ -49,10 +56,14 @@
                 if (!isAvailable.rotationRateAvailable) {
                     logger({ message: 'Device rotation rate is not available.' });
                 }
-                // 
-                start_gn(true);
             }).catch(function (e) {
                 logger(e);
+            }).then(function () {
+                logger({ message: "POST INIT GyroNorm" });
+                // 
+                start_gn(false);
+                // 
+                callback();
             });
         }
 
@@ -183,7 +194,7 @@
                         wsConnection.send(stringToArray(response));
                         // Gyronorm must be restarted for normal push operations to resume
                         stop_gn();
-                        start_gn(true);
+                        start_gn(false);
                     });
                     break;
                 case "FLOOD":
@@ -200,31 +211,35 @@
         $(function () {
             "use strict";
 
-            init_gn();
-            init_ws();
+            var onCompleteCB = function () {
+                init_ws();
 
-            /**
-             * This method is optional. If the server wasn't able to
-             * respond to the in 3 seconds then show some error message 
-             * to notify the user that something is wrong.
-             */
-            var intervalId = null;
-            intervalId = setInterval(function () {
-                if (wsConnection == null) {
-                    clearInterval(intervalId);
-                    logger({ message: "Stopping GyroNorm" });
-                    stop_gn();
-                    return;
-                }
+                /**
+                 * This method is optional. If the server wasn't able to
+                 * respond to the in 3 seconds then show some error message 
+                 * to notify the user that something is wrong.
+                 */
+                var intervalId = null;
+                intervalId = setInterval(function () {
+                    if (wsConnection == null) {
+                        clearInterval(intervalId);
+                        logger({ message: "Stopping GyroNorm" });
+                        stop_gn();
+                        return;
+                    }
 
-                if (wsConnection.readyState !== 1) {
-                    alert('Health check of websocket failed, shutting down');
-                    logger({ message: "WebSocket was in error state, closing down" });
-                    //
-                    stop_gn();
-                    wsConnection = null;
-                }
-            }, 3000);
+                    if (wsConnection.readyState !== 1) {
+                        alert('Health check of websocket failed, shutting down');
+                        logger({ message: "WebSocket was in error state, closing down" });
+                        //
+                        stop_gn();
+                        wsConnection = null;
+                    }
+                }, 3000);
+
+            };
+
+            init_gn(onCompleteCB);
 
             /*
              * Send new values every 50 ms.
