@@ -1,6 +1,7 @@
 .DS_Store
 bin/*
 node_modules/*
+site/node_modules/*
 obj/*
 *.csproj
 *.csproj.user
