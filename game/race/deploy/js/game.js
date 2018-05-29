@@ -35,7 +35,7 @@ var state = {
     preload: function(){
         this.load.image("blue_car", "/assets/car_blue_1.png");
         this.load.image("bg", "/assets/land_dirt12.png");
-        this.load.image("obs1", "/assets/oil.png");
+        this.load.image("obs1", "/assets/mcycle.png");
         this.load.image("window", "/assets/grey_panel.png");
         this.totalScore = 0;
     },
