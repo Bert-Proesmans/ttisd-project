@@ -195,7 +195,7 @@ function ws_on_message(message) {
                 speedLeft: obj.data.ratioLeft * SPEED,
                 speedRight: obj.data.ratioRight * SPEED,
                 speedForward: obj.data.ratioForward * SPEED*2,
-                speedBackward: obj.data.ratioBackward * SPEED,
+                speedBackward: obj.data.ratioBackward * SPEED*2,
             };
             break;
     }
