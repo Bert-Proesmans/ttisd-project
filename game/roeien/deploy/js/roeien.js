@@ -48,6 +48,7 @@ var state = {
         this.load.image('bg', 'assets/bg.png');
         this.load.image('boat', 'assets/boat.png');
         this.load.image('t17', 'assets/tile_17.png');
+        this.load.image("window", "assets/grey_panel.png"); 
         this.cursors = this.input.keyboard.createCursorKeys()
         this.high = false
         this.measured = 0
@@ -66,14 +67,38 @@ var state = {
       this.player.angle += 270
       this.text = this.add.text(5, 5, String(this.measured))
 
+      this.physics.arcade.enableBody(this.player);
+      this.physics.arcade.enableBody(this.backgroundRight);
       this.physics.enable(this.player, Phaser.Physics.ARCADE);
+      this.physics.enable(this.backgroundRight, Phaser.Physics.ARCADE); 
+      game.input.onDown.add(this.stg, self); 
     
    
     },
+    collisionHandler: function () { 
+        this.sprEnd = game.add.sprite(250, 300, 'window'); 
+        this.txtEnd = game.add.text(310, 310, "You reached the other side!", { align: "center" }); 
+        this.restartGameEnd = game.add.text(310, 390, "Click to restart game", { align: "center" }) 
+        this.sprEnd.scale.setTo(3, 2) 
+ 
+ 
+        this.game.paused = true; 
+    }, 
+    stg: function () { 
+        if (this.game.paused === true) { 
+            location.reload(); 
+ 
+            //this.txtEnd.destroy(); 
+            //this.sprEnd.destroy(); 
+            //this.restartGameEnd.destroy(); 
+            //this.scoreEnd.destroy() 
+        } 
+ 
+    }, 
     update: function() {
     
         let instruc = "pull"
-  
+        
         if(this.vel > 0){
             this.vel -= 1
         }
@@ -107,6 +132,7 @@ var state = {
 
         this.text.setText(this.measured + "             " + instruc);
         this.player.body.velocity.x = this.vel
+        this.physics.arcade.collide(this.player, this.backgroundRight, this.collisionHandler, null, this); // check collission 
     }
 }
 
