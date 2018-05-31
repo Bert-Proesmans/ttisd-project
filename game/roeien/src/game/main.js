@@ -25,11 +25,13 @@ var state = {
         this.load.image('bg', '/dist/assets/bg.png');
         this.load.image('boat', '/dist/assets/boat.png');
         this.load.image('t17', '/dist/assets/tile_17.png');
+        this.load.image("window", "/dist/assets/grey_panel.png");
         this.cursors = this.input.keyboard.createCursorKeys();
         this.high = POSITION_DOWN;
         this.timeout = 0;
         this.vel = 0;
         this.instruction = "Push to get started";
+        //this.game.paused = false;
 
         init();
     },
@@ -39,17 +41,44 @@ var state = {
 
         this.background = this.add.tileSprite(0, 0, this.world.width, this.world.height, 'bg');
         this.backgroundRight = this.add.tileSprite(this.world.width - 40, 0, this.world.width - 40, this.world.height, 't17');
+        this.physics.enable(this.backgroundRight, Phaser.Physics.ARCADE);
         this.player = this.add.sprite(20, 400, 'boat');
         this.player.scale.setTo(2.5, 2.5);
         this.player.angle += 270;
         this.text = this.add.text(5, 5, String(this.measured));
 
         this.physics.enable(this.player, Phaser.Physics.ARCADE);
+        game.input.onDown.add(this.stg, self);
+    },
+    colissionHandler: function () {
+        this.sprEnd = game.add.sprite(250, 300, 'window');
+        this.txtEnd = game.add.text(310, 310, "You reached the other side!", { align: "center" });
+        this.restartGameEnd = game.add.text(310, 390, "Click to restart game", { align: "center" })
+        this.sprEnd.scale.setTo(3, 2)
+
+
+        this.game.paused = true;
+    },
+    stg: function () {
+        if (this.game.paused === true) {
+            location.reload();
+
+            //this.txtEnd.destroy();
+            //this.sprEnd.destroy();
+            //this.restartGameEnd.destroy();
+            //this.scoreEnd.destroy()
+        }
+        else{
+            console.log("Not ending")
+        }
+
     },
     update: function () {
         this.timeout -= 1;
         // logger({ timeout: this.timeout });
 
+        this.physics.arcade.overlap(this.player, this.backgroundRight, this.collisionHandler, null, this); // check collission
+ 
         if (lastAccel > 0) {
             lastAccel = 0;
             this.instruction = "";

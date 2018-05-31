@@ -11,5 +11,8 @@
   "dependencies": {
     "inquirer": "^5.2.0",
     "websocket": "^1.0.26"
+  },
+  "devDependencies": {
+    "grunt": "^1.0.2"
   }
 }

@@ -9,3 +9,5 @@
 
 KartonApp/\.idea/caches/build_file_checksums\.ser
 site/node_modules/
+
+game/punch/node_modules/\.bin/
