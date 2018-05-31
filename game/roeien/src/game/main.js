@@ -47,18 +47,21 @@ var state = {
         this.player.angle += 270;
         this.text = this.add.text(5, 5, String(this.measured));
 
+        this.physics.arcade.enableBody(this.player);
+        this.physics.arcade.enableBody(this.backgroundRight);
         this.physics.enable(this.player, Phaser.Physics.ARCADE);
+        this.physics.enable(this.backgroundRight, Phaser.Physics.ARCADE); 
         game.input.onDown.add(this.stg, self);
     },
-    colissionHandler: function () {
-        this.sprEnd = game.add.sprite(250, 300, 'window');
-        this.txtEnd = game.add.text(310, 310, "You reached the other side!", { align: "center" });
-        this.restartGameEnd = game.add.text(310, 390, "Click to restart game", { align: "center" })
-        this.sprEnd.scale.setTo(3, 2)
-
-
-        this.game.paused = true;
-    },
+    collisionHandler: function () { 
+        this.sprEnd = game.add.sprite(250, 300, 'window'); 
+        this.txtEnd = game.add.text(310, 310, "You reached the other side!", { align: "center" }); 
+        this.restartGameEnd = game.add.text(310, 390, "Click to restart game", { align: "center" }) 
+        this.sprEnd.scale.setTo(4, 4) 
+ 
+ 
+        this.game.paused = true; 
+    }, 
     stg: function () {
         if (this.game.paused === true) {
             location.reload();
@@ -77,7 +80,7 @@ var state = {
         this.timeout -= 1;
         // logger({ timeout: this.timeout });
 
-        this.physics.arcade.overlap(this.player, this.backgroundRight, this.collisionHandler, null, this); // check collission
+       
  
         if (lastAccel > 0) {
             lastAccel = 0;
@@ -135,6 +138,8 @@ var state = {
 
         this.text.setText(this.instruction);
         this.player.body.velocity.x = this.vel;
+
+        this.physics.arcade.collide(this.player, this.backgroundRight, this.collisionHandler, null, this); // check collission 
     }
 }
 
