@@ -82,7 +82,7 @@ var state = {
         this.sprEnd = game.add.sprite(250, 300, 'window'); 
         this.txtEnd = game.add.text(310, 310, "You reached the other side!", { align: "center", font: "12pt Arial" }); 
         this.restartGameEnd = game.add.text(310, 390, "Click to restart game", { align: "center", font: "12pt Arial" }) 
-        this.sprEnd.scale.setTo(4, 4) 
+        this.sprEnd.scale.setTo(3, 2) 
  
  
         this.game.paused = true; 
