@@ -60,7 +60,8 @@
                 logger(e);
             }).then(function () {
                 logger({ message: "POST INIT GyroNorm" });
-                // 
+                // Auto-flood updates, useful for debuging.
+                // start_gn(true);
                 start_gn(false);
                 // 
                 callback();

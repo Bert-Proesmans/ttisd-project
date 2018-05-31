@@ -10,8 +10,10 @@ var WebsocketServer = require('websocket').server;
 
 const hostname = 'localhost';
 const port = 3000;
+const update_interval = (1.0 / 50.0)
 
 var client = null;
+var distanceCounter = null;
 // All calibration happens in LANDSCAPE MODE!
 // The alpha, beta, gamma values are always relative to the device orthogonal
 // system.
@@ -242,12 +244,182 @@ const questions_racing = [
 
 ];
 
+// Kalman filter to produce a noise free acceleration.
+// Use this filter one the combined acceleration of all axis. This both
+// reduces the amount of calculations necessary and makes the acceleration 
+// single-dimensional -> because we don't know which axis we ACTUALLY want..
+// The view application decides what the acceleration means, TODO: pass down 
+// client IDs so the client can link up data with the semantic meaning.
+function Kalman() {
+	this.G = 1; // filter gain
+	this.Rw = 1; // noise power desirable
+	this.Rv = 10; // noise power estimated
+
+	this.A = 1;
+	this.C = 1;
+	this.B = 0;
+	this.u = 0;
+	this.P = NaN;
+	this.x = NaN; // estimated signal without noise
+	this.y = NaN; //measured		
+
+	this.onFilteringKalman = function (ech)//signal: signal measured
+	{
+		this.y = ech;
+
+		if (isNaN(this.x)) {
+			this.x = 1 / this.C * this.y;
+			this.P = 1 / this.C * this.Rv * 1 / this.C;
+		}
+		else {
+			// Kalman Filter: Prediction and covariance P
+			this.x = this.A * this.x + this.B * this.u;
+			this.P = this.A * this.P * this.A + this.Rw;
+			// Gain
+			this.G = this.P * this.C * 1 / (this.C * this.P * this.C + this.Rv);
+			// Correction
+			this.x = this.x + this.G * (this.y - this.C * this.x);
+			this.P = this.P - this.G * this.C * this.P;
+		};
+		return this.x;
+	};
+
+	this.setRv = function (Rv)//signal: signal measured
+	{
+		this.Rv = Rv;
+	};
+};
+
+function DistanceCalculator() {
+	this.acc_norm = new Array(); // amplitude of the acceleration 
+
+	this.var_acc = 0.; // variance of the acceleration on the window L
+	this.min_acc = 1. / 0.;  // minimum of the acceleration on the window L
+	this.max_acc = -1. / 0.; // maximum of the acceleration on the window L
+	this.threshold = -1. / 0.; // threshold to detect any acceleration
+	this.sensibility = 1. / 30.;  // sensibility to detect any acceleration in relation
+	// to running avg acceleration.
+
+	this.speed = 0;  // instantaneous speed of the pedestrian (m/s)
+	this.meanSpeed = 0;  // mean speed of the pedestrian (m/s)
+
+	this.filter = new Kalman();
+
+	// initialization of arrays.
+	//
+	// USAGE:
+	// createTable(2/[interval (s)]);
+	this.createTable = function (lWindow) {
+		this.acc_norm = new Array(lWindow);
+	};
+
+	// update arrays
+	this.update = function () {
+		this.acc_norm.shift();
+	};
+
+	this.setSensibility = function (sensibility) {
+		this.sensibility = sensibility;
+	};
+
+	// compute norm of the acceleration vector.
+	// this combines accelerometer data from all axes (including GRAVITY?).	
+	//
+	// USAGE: 
+	// normalized_acc = computeNorm(data.dm.gx, data.dm.gy, data.dm.gz);
+	// [this].acc_norm.push(normalized_acc);
+	// update();
+	this.computeNorm = function (x, y, z) {
+		var norm = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z, 2));
+		var norm_filt = this.filter.onFilteringKalman(norm);
+
+		return norm_filt / 9.80665;
+	};
+
+	// seek variance
+	this.varAcc = function (acc) {
+		var moy = 0.;//mean
+		var moy2 = 0.;//square mean
+		for (var k = 0; k < acc.length - 1; k++) {
+			moy += acc[k];
+			moy2 += Math.pow(acc[k], 2);
+		};
+		this.var_acc = (Math.pow(moy, 2) - moy2) / acc.length;
+		if (this.var_acc - 0.5 > 0.) {
+			this.var_acc -= 0.5;
+		};
+		if (isNaN(this.var_acc) == 0) {
+			this.filter.setRv(this.var_acc);
+			this.setSensibility(2. * Math.sqrt(this.var_acc) / Math.pow(9.80665, 2));
+		}
+		else {
+			this.setSensibility(1. / 30.);
+		};
+	};
+
+	// seek minimum
+	this.minAcc = function (acc) {
+		var mini = 1. / 0.;
+		for (var k = 0; k < acc.length; k++) {
+			if (acc[k] < mini) {
+				mini = acc[k];
+			};
+		};
+		return mini;
+	};
+
+	// seek maximum
+	this.maxAcc = function (acc) {
+		var maxi = -1. / 0.;
+		for (var k = 0; k < acc.length; k++) {
+			if (acc[k] > maxi) {
+				maxi = acc[k];
+			};
+		};
+		return maxi;
+	};
+
+	// compute the threshold
+	this.setThreshold = function (min, max) {
+		this.threshold = (min + max) / 2;
+	};
+
+	// Return 
+	//
+	// USAGE: 
+	// normalized_acc = computeNorm(data.dm.gx, data.dm.gy, data.dm.gz);
+	// [this].acc_norm.push(normalized_acc);
+	// update();
+	// data = onMeasurement([this].acc_norm)
+	this.onMeasurement = function (acc) {
+		this.varAcc(acc);
+		this.min_acc = this.minAcc(acc);
+		this.max_acc = this.maxAcc(acc);
+
+		this.setThreshold(this.min_acc, this.max_acc);
+
+		var diff = this.max_acc - this.min_acc;
+
+		var isSensibility = (Math.abs(diff) >= this.sensibility)// the acceleration has to go over the sensibility
+		var isOverThreshold = ((acc[acc.length - 1] >= this.threshold) && (acc[acc.length - 2] < this.threshold));// if the acceleration goes over the threshold and the previous was below this threshold
+
+		if (isSensibility && isOverThreshold) {
+			return acc[acc.length - 1];
+		} else {
+			// return acc[acc.length - 1];
+			return 0;
+		}
+	};
+}
+
 function delegate_command(data_string, connection) {
 	switch (data_string) {
 		case "ANNOUNCE: CLIENT":
 			if (client == null) {
 				console.log({ action: "REG_CLIENT", status: "OK" });
 				client = connection;
+				distanceCounter = new DistanceCalculator();
+				distanceCounter.createTable(Math.round(2 / update_interval));
 			} else {
 				console.log({ action: "REG_CLIENT", status: "ALREADY REGISTERED" });
 				connection.sendUTF("FAIL_REGISTER");
@@ -296,10 +468,6 @@ function delegate_data(data_bytes, connection) {
 		case "RUNNING":
 			if (connection !== client) break;
 
-			// Calculate the ratio's for each movement.
-			var zAngle = obj.data.do.alpha - calibration.zero.alpha;
-			var yAngle = obj.data.do.gamma - calibration.zero.gamma;
-
 			var multicastObj = {
 				type: "RUNNING",
 				data: {
@@ -307,29 +475,48 @@ function delegate_data(data_bytes, connection) {
 					ratioRight: 0,
 					ratioForward: 0,
 					ratioBackward: 0,
+					acceleration: 0,
 				}
 			};
 
-			zAngle = Math.sin(toRadians(zAngle));
-			yAngle = Math.sin(toRadians(yAngle));
-
-			if (zAngle < 0) { // Turn right
-				multicastObj.data.ratioRight = Math.abs(zAngle);
-				multicastObj.data.ratioLeft = 0;
-			} else { // Turn left
-				multicastObj.data.ratioRight = 0;
-				multicastObj.data.ratioLeft = Math.abs(zAngle);
+			if (distanceCounter != null) {
+				var mgx = obj.data.dm.gx;
+				var mgy = obj.data.dm.gy;
+				var mgz = obj.data.dm.gz;
+				var norm = distanceCounter.computeNorm(mgx, mgy, mgz);
+				distanceCounter.acc_norm.push(norm);
+				distanceCounter.update();
+				var acceleration = distanceCounter.onMeasurement(distanceCounter.acc_norm);
+				multicastObj.data.acceleration = acceleration;
+				// console.log({ dbg: true, acceleration: acceleration });
 			}
 
-			if (yAngle < 0) { // Pull
-				multicastObj.data.ratioBackward = Math.abs(zAngle);
-				multicastObj.data.ratioForward = 0;
-			} else {
-				multicastObj.data.ratioBackward = 0;
-				multicastObj.data.ratioForward = Math.abs(zAngle);
+			if (calibration.valid == true) {
+				// Calculate the ratio's for each movement.
+				var zAngle = obj.data.do.alpha - calibration.zero.alpha;
+				var yAngle = obj.data.do.gamma - calibration.zero.gamma;
+
+				zAngle = Math.sin(toRadians(zAngle));
+				yAngle = Math.sin(toRadians(yAngle));
+
+				if (zAngle < 0) { // Turn right
+					multicastObj.data.ratioRight = Math.abs(zAngle);
+					multicastObj.data.ratioLeft = 0;
+				} else { // Turn left
+					multicastObj.data.ratioRight = 0;
+					multicastObj.data.ratioLeft = Math.abs(zAngle);
+				}
+
+				if (yAngle < 0) { // Pull
+					multicastObj.data.ratioBackward = Math.abs(zAngle);
+					multicastObj.data.ratioForward = 0;
+				} else {
+					multicastObj.data.ratioBackward = 0;
+					multicastObj.data.ratioForward = Math.abs(zAngle);
+				}
 			}
 
-			console.log({ ratios: multicastObj });
+			// console.log({ dbg: true, ratios: multicastObj });
 			multicastObj = JSON.stringify(multicastObj);
 
 			// Send it to all views
@@ -439,6 +626,7 @@ wsServer.on('request', function (request) {
 		console.log((new Date()) + " Peer " + connection.remoteAddress + " disconnected.");
 		if (client === connection) {
 			client = null;
+			distanceCounter = null;
 			console.log({ action: "CLOSE", message: "Client disconnected!" });
 		}
 	});
