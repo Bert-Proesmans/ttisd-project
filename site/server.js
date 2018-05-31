@@ -85,6 +85,7 @@ const questions_racing = [
 		message: 'What game logic do you wish?',
 		choices: [
 			'Racing',
+			'Rowing',
 		]
 	},
 	{
@@ -222,12 +223,27 @@ const questions_racing = [
 	},
 	{
 		type: 'input',
+		name: 'accelerateUp',
+		message: 'Pull the cords to lift the client',
+		default: 'OK',
+		when: function (hash) {
+			return hash.game === 'Rowing';
+		}
+	},
+	{
+		type: 'input',
+		name: 'accelerateDown',
+		message: 'Release the cords to lower the client',
+		default: 'OK',
+		when: function (hash) {
+			return hash.game === 'Rowing';
+		}
+	},
+	{
+		type: 'input',
 		name: 'allDone',
 		message: 'Calibration complete',
 		default: 'OK',
-		when: function (hash) {
-			return hash.game === 'Racing';
-		},
 		validate: function (value) {
 			// var done = this.async();
 			var valid = promise_snapshot_defer == null && client != null;
@@ -634,14 +650,15 @@ wsServer.on('request', function (request) {
 
 // Wait for random input on STDIN before starting interactive cli.
 process.stdin.once('data', function () {
+	console.log({ message: "Calibration complete" });
 	// Execute inquirer for interactive calibration
 	inquirer.prompt(questions_racing).then(function (answers) {
-		if (calibration.valid) {
+		if (calibration.valid && answers.game === 'Racing') {
 			console.log({ action: "Interactive calibration", status: "OK", data: answers });
-			console.log({ message: "Calibration complete", calib: calibration });
 			console.log(calibration.max_min);
-			// Instruct client to send updates
-			client_send_str("FLOOD");
 		}
+
+		// Instruct client to send updates
+		client_send_str("FLOOD");
 	});
 });

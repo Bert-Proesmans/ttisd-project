@@ -152,6 +152,7 @@ function init_ws() {
 
 function ws_on_open() {
     wsConnection.send("ANNOUNCE: VIEW");
+    logger({message: "WS opened"});
 }
 
 function ws_on_error(error) {

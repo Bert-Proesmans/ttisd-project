@@ -12,6 +12,7 @@
     <script type="text/javascript">
         var gn = null;
         var wsConnection = null;
+        var runFlood = false;
 
         function stringToArray(bufferString) {
             let uint8Array = new TextEncoder("utf-8").encode(bufferString);
@@ -60,9 +61,7 @@
                 logger(e);
             }).then(function () {
                 logger({ message: "POST INIT GyroNorm" });
-                // Auto-flood updates, useful for debuging.
-                // start_gn(true);
-                start_gn(false);
+                start_gn();
                 // 
                 callback();
             });
@@ -72,12 +71,8 @@
             gn.stop();
         }
 
-        function start_gn(flood) {
-            let cb = function (data) {
-                if (flood)
-                    after_start_gn_callback(data);
-            }
-            gn.start(cb);
+        function start_gn() {
+            gn.start(after_start_gn_callback);
         }
 
         function after_start_gn_callback(data) {
@@ -86,7 +81,7 @@
             This callback delivers data, which can be used to populate connections or
             DOM.
             */
-            if (wsConnection == null)
+            if (wsConnection == null || !runFlood)
                 return;
 
             /*
@@ -195,13 +190,12 @@
                         wsConnection.send(stringToArray(response));
                         // Gyronorm must be restarted for normal push operations to resume
                         stop_gn();
-                        start_gn(false);
+                        start_gn();
                     });
                     break;
                 case "FLOOD":
                     logger({ operation: "FLOOD" });
-                    stop_gn();
-                    start_gn(true);
+                    runFlood = true;
                     break;
                 default:
                     logger({ message: "Unrecognized command", command: message.data });
